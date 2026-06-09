@@ -1,0 +1,118 @@
+{
+  "generated_at": "2026-06-09T11:55:59.919237",
+  "source_directory": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections",
+  "tags_source": "自动发现（.collection_tags.json）（原始来源: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv）",
+  "tags_manifest_meta": {
+    "path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
+    "generated_at": "2026-06-09T11:55:59.724263",
+    "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
+    "tag_count": 5
+  },
+  "tags_history_used_version": 2,
+  "tags_history_summary": [
+    {
+      "version": 1,
+      "generated_at": "2026-06-09T11:55:59.130152",
+      "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
+      "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
+      "tag_count": 5,
+      "sample_ids": [
+        "GHOST-888",
+        "GHOST-999",
+        "OLD-001",
+        "OLD-002",
+        "OLD-003"
+      ]
+    },
+    {
+      "version": 2,
+      "generated_at": "2026-06-09T11:55:59.725206",
+      "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
+      "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
+      "tag_count": 5,
+      "sample_ids": [
+        "GHOST-888",
+        "GHOST-999",
+        "OLD-001",
+        "OLD-002",
+        "OLD-003"
+      ]
+    }
+  ],
+  "missing_tag_ids": [
+    "GHOST-888",
+    "GHOST-999"
+  ],
+  "all_tag_fields": [
+    "作者",
+    "名称",
+    "展览主题",
+    "年代",
+    "类别"
+  ],
+  "statistics": {
+    "total_collections": 2,
+    "complete_collections": 2,
+    "incomplete_collections": 0,
+    "total_size_bytes": 5525,
+    "total_size_human": "5.40 KB"
+  },
+  "group_summaries": {
+    "古代文明展": {
+      "collection_count": 2,
+      "file_count": 6,
+      "missing_files_count": 0,
+      "size_bytes": 5525,
+      "size_human": "5.40 KB"
+    }
+  },
+  "groups": {
+    "古代文明展": {
+      "file_count": 6,
+      "size_bytes": 5525,
+      "size_human": "5.40 KB",
+      "files": [
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_照片.jpg",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_讲解.mp3",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_说明.txt",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_照片.jpg",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_讲解.mp3",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_说明.txt"
+      ]
+    }
+  },
+  "collections": {
+    "OLD-002": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {
+        "名称": "青花瓷瓶",
+        "年代": "明代",
+        "类别": "瓷器",
+        "作者": "佚名",
+        "展览主题": "古代文明展"
+      },
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_讲解.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_说明.txt"
+      }
+    },
+    "OLD-001": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {
+        "名称": "青铜鼎",
+        "年代": "商代",
+        "类别": "青铜器",
+        "作者": "未知",
+        "展览主题": "古代文明展"
+      },
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_讲解.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_说明.txt"
+      }
+    }
+  }
+}

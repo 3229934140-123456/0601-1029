@@ -1,6 +1,7 @@
 """创建验证修复场景的测试数据"""
 
 import csv
+import json
 import shutil
 from pathlib import Path
 
@@ -34,13 +35,15 @@ def create_fix_test_data(base_dir: Path) -> None:
         (collections_dir / f'{cid}_说明.txt').write_text(
             f"藏品编号：{cid}\n名称：{col['name']}\n", encoding='utf-8')
     
-    # 标签表格
+    # 标签表格（加两个"清单里有但目录里无"的幽灵编号，用于测试 missing_tag_ids）
     scene1_tags = base_dir / '场景1_藏品标签.csv'
     with open(scene1_tags, 'w', newline='', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerow(['藏品编号', '名称', '年代', '类别', '作者', '展览主题'])
         for col in scene1_collections:
             writer.writerow([col['id'], col['name'], col['era'], col['category'], col['author'], col['exhibition']])
+        writer.writerow(['GHOST-999', '缺图文物', '唐代', '陶器', '佚名', '古代文明展'])
+        writer.writerow(['GHOST-888', '遗失书画', '宋代', '书画', '苏轼', '书画艺术展'])
     
     # ============================================================
     # 场景 2：不支持格式文件（pdf、exe、zip 等）- check 应标记失败
@@ -79,6 +82,33 @@ def create_fix_test_data(base_dir: Path) -> None:
         writer.writerow(['旧编号', '新编号', '图片描述', '音频描述', '文本描述'])
         for col in scene3_collections:
             writer.writerow([col['old'], col['new'], '文物照片', '讲解录音', '藏品说明'])
+    
+    # 批次配置文件
+    batch_config = base_dir / '批次配置_展览交接.json'
+    batch_data = [
+        {
+            'name': '春季展_古代文明',
+            'themes': ['古代文明展'],
+            'exclude_uncategorized': True,
+            'output_dir': str((base_dir / '批次输出' / '春季展_古代文明').resolve()),
+            'format': 'copy',
+        },
+        {
+            'name': '春季展_书画艺术',
+            'themes': ['书画艺术展'],
+            'exclude_uncategorized': True,
+            'output_dir': str((base_dir / '批次输出' / '春季展_书画艺术').resolve()),
+            'format': 'copy',
+        },
+        {
+            'name': '未分类素材',
+            'only_uncategorized': True,
+            'output_dir': str((base_dir / '批次输出' / '未分类素材').resolve()),
+            'format': 'copy',
+        },
+    ]
+    with open(batch_config, 'w', encoding='utf-8') as f:
+        json.dump(batch_data, f, ensure_ascii=False, indent=2)
     
     print(f"\n✅ 测试数据已创建在: {base_dir}")
     print(f"   素材目录: {collections_dir}")

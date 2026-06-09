@@ -1,4 +1,4 @@
-"""一键验证脚本 - 覆盖所有修复场景"""
+"""一键验证脚本 - 覆盖所有修复与新增场景"""
 
 import csv
 import json
@@ -55,131 +55,252 @@ def assert_true(cond: bool, msg: str):
         raise AssertionError(msg)
 
 
+def read_csv_rows(path: Path) -> list:
+    with open(path, 'r', encoding='utf-8-sig') as f:
+        return list(csv.DictReader(f))
+
+
 # ============================================================
-# 场景 1：tag --apply → pack --apply，整理报告里有完整标签
+# 场景 A：tag 版本历史 + 清单复用 + missing_tag_ids
 # ============================================================
-def scene1():
+def scene_a_tag_history():
     print("\n" + "#" * 70)
-    print("# 场景1：tag 导入标签 → pack 自动读取清单 → 整理报告含标签")
+    print("# 场景A：tag 版本历史 / 清单复用 / 清单有但目录无的编号")
     print("#" * 70)
     
     tags_csv = TEST_BASE / '场景1_藏品标签.csv'
-    external_manifest = TEST_BASE / '我的标签清单.json'
     
-    # 步骤1：tag --apply 把清单写到用户指定的外部路径
-    tag_out = run([
+    # 清理旧的清单与历史
+    for p in COLLECTIONS.iterdir():
+        if p.name.startswith('.collection_tags'):
+            p.unlink()
+    
+    # 第一次 tag --apply
+    out1 = run([
         PYTHON, '-m', 'collection_manager', 'tag',
-        str(COLLECTIONS), str(tags_csv),
-        '--apply', '--manifest-output', str(external_manifest),
+        str(COLLECTIONS), str(tags_csv), '--apply',
     ])
-    assert_true(external_manifest.exists(), f"外部清单文件已生成: {external_manifest.name}")
+    assert_true('已记录到版本历史 (v1)' in out1,
+                "第一次 tag --apply 显示 v1 版本历史")
     
-    with open(external_manifest, 'r', encoding='utf-8') as f:
-        manifest = json.load(f)
-    assert_true('tags' in manifest and len(manifest['tags']) == 3,
-                "清单包含 3 条标签记录")
-    assert_true(manifest.get('source', '').endswith('场景1_藏品标签.csv'),
-                f"清单元数据记录了来源: {manifest.get('source')}")
-    assert_true('OLD-001' in manifest['tags'] and '展览主题' in manifest['tags']['OLD-001'],
-                "OLD-001 有完整标签（含展览主题）")
+    # 第二次 tag --apply（应该是 v2）
+    out2 = run([
+        PYTHON, '-m', 'collection_manager', 'tag',
+        str(COLLECTIONS), str(tags_csv), '--apply',
+    ])
+    assert_true('已记录到版本历史 (v2)' in out2,
+                "第二次 tag --apply 显示 v2 版本历史")
     
-    # 步骤2：pack 使用 --manifest-file 指定外部清单，且 --apply 真正执行
-    packed_dir = TEST_BASE / 'collections_packed'
+    history_file = COLLECTIONS / '.collection_tags_history.json'
+    assert_true(history_file.exists(), ".collection_tags_history.json 存在于素材目录")
+    
+    with open(history_file, 'r', encoding='utf-8') as f:
+        history = json.load(f)
+    assert_true(isinstance(history, list) and len(history) >= 2,
+                f"历史列表至少有 2 条记录，实际 {len(history)}")
+    assert_true(history[-1]['version'] == 2,
+                f"最新版本号=2，实际 {history[-1]['version']}")
+    assert_true(history[-1].get('generated_at') and history[-1].get('source'),
+                "历史记录包含 generated_at 和 source 元数据")
+    
+    manifest = COLLECTIONS / '.collection_tags.json'
+    assert_true(manifest.exists(), ".collection_tags.json 存在")
+    with open(manifest, 'r', encoding='utf-8') as f:
+        mf = json.load(f)
+    assert_true('GHOST-999' in mf.get('tags', {}),
+                "清单里包含 GHOST-999（幽灵编号，用于测试 missing_tag_ids）")
+    
+    print("\n✅ 场景A通过")
+
+
+# ============================================================
+# 场景 B：--only-themes + --exclude-uncategorized，报告范围验证
+# ============================================================
+def scene_b_only_themes():
+    print("\n" + "#" * 70)
+    print("# 场景B：只选古代文明展并排除未分类 → 报告范围验证")
+    print("#" * 70)
+    
+    packed_dir = TEST_BASE / 'sceneB_only_ancient'
     if packed_dir.exists():
         shutil.rmtree(packed_dir)
     
-    pack_out = run([
+    out = run([
         PYTHON, '-m', 'collection_manager', 'pack',
         str(COLLECTIONS),
-        '--manifest-file', str(external_manifest),
+        '--only-themes', '古代文明展',
+        '--exclude-uncategorized',
+        '-o', str(packed_dir),
         '-v', '--apply',
     ], input_text='y\n')
     
-    # 步骤3：验证输出目录结构
-    assert_true(packed_dir.exists(), "pack 输出目录已创建")
+    # 输出目录下只应有 古代文明展
+    subdirs = [p.name for p in packed_dir.iterdir() if p.is_dir()]
+    assert_true(subdirs == ['古代文明展'],
+                f"只输出 '古代文明展' 分组，实际目录: {subdirs}")
     
-    ancient_dir = packed_dir / '古代文明展'
-    calligraphy_dir = packed_dir / '书画艺术展'
-    uncategorized_dir = packed_dir / '未分类'
-    assert_true(ancient_dir.is_dir(), "存在 '古代文明展' 分组目录")
-    assert_true(calligraphy_dir.is_dir(), "存在 '书画艺术展' 分组目录")
-    assert_true(uncategorized_dir.is_dir(), "存在 '未分类' 分组目录")
-    
-    ancient_files = list(ancient_dir.iterdir())
-    assert_true(len(ancient_files) == 6,
-                f"古代文明展有 6 个文件（OLD-001 + OLD-002 各3件），实际 {len(ancient_files)}")
-    old001_present = any('OLD-001' in f.name for f in ancient_files)
-    assert_true(old001_present, "古代文明展包含 OLD-001 藏品")
-    
-    # 步骤4：检查整理报告 JSON
+    # JSON 报告里的 collections 只有 OLD-001、OLD-002（GHOST-999 没文件）
     report_json = packed_dir / '整理报告.json'
-    assert_true(report_json.exists(), "整理报告.json 已生成")
+    assert_true(report_json.exists(), "整理报告.json 存在")
     with open(report_json, 'r', encoding='utf-8') as f:
         report = json.load(f)
     
-    assert_true('tags_source' in report, "报告中包含 tags_source")
-    assert_true('清单文件' in report['tags_source'],
-                f"tags_source 指示为清单文件: {report['tags_source']}")
-    assert_true('all_tag_fields' in report and len(report['all_tag_fields']) >= 4,
-                f"报告包含全部标签字段名: {report.get('all_tag_fields')}")
-    assert_true('OLD-001' in report['collections'],
-                "报告包含 OLD-001 藏品")
-    tags001 = report['collections']['OLD-001']['tags']
-    assert_true(tags001.get('年代') and tags001.get('类别') and tags001.get('作者') and tags001.get('展览主题'),
-                f"OLD-001 在报告里有完整标签: {tags001}")
+    collections_in_report = list(report['collections'].keys())
+    assert_true(sorted(collections_in_report) == ['OLD-001', 'OLD-002'],
+                f"JSON 报告 collections 只含 OLD-001/OLD-002，实际: {collections_in_report}")
+    assert_true(report['statistics']['total_collections'] == 2,
+                f"总藏品数=2，实际 {report['statistics']['total_collections']}")
     
-    # 步骤5：检查整理报告 CSV（各标签字段展开为独立列）
-    report_csv = packed_dir / '整理报告.csv'
-    assert_true(report_csv.exists(), "整理报告.csv 已生成")
-    with open(report_csv, 'r', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-    header = reader.fieldnames or []
-    assert_true('展览主题' in header and '年代' in header,
-                f"CSV 表头已展开标签列: {header}")
-    old001_row = next(r for r in rows if r['藏品编号'] == 'OLD-001')
-    assert_true(old001_row['展览主题'] == '古代文明展',
-                f"OLD-001 CSV 里的展览主题正确: {old001_row['展览主题']}")
+    # 标签版本信息存在
+    assert_true('tags_history_used_version' in report,
+                "报告包含 tags_history_used_version")
+    assert_true(report.get('tags_history_used_version') >= 2,
+                f"使用标签版本 >= 2，实际 {report.get('tags_history_used_version')}")
     
-    # 步骤6：检查主题汇总清单
+    # missing_tag_ids 包含 GHOST-999
+    assert_true('GHOST-999' in report.get('missing_tag_ids', []),
+                f"missing_tag_ids 包含 GHOST-999，实际: {report.get('missing_tag_ids')}")
+    
+    # 主题汇总与 JSON group_summaries 一致
     summary_csv = packed_dir / '主题汇总清单.csv'
-    assert_true(summary_csv.exists(), "主题汇总清单.csv 已生成")
-    with open(summary_csv, 'r', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f)
-        summary_rows = list(reader)
-    assert_true(len(summary_rows) == 3, f"主题汇总共 3 行，实际 {len(summary_rows)}")
-    ancient_summary = next(r for r in summary_rows if r['主题分组'] == '古代文明展')
-    assert_true(int(ancient_summary['藏品数']) == 2,
-                f"古代文明展藏品数=2，实际 {ancient_summary['藏品数']}")
-    assert_true(int(ancient_summary['文件数']) == 6,
-                f"古代文明展文件数=6，实际 {ancient_summary['文件数']}")
-    assert_true('总大小(可读)' in ancient_summary and ancient_summary['总大小(可读)'],
-                "主题汇总含总大小(可读)字段")
+    summary_rows = read_csv_rows(summary_csv)
+    assert_true(len(summary_rows) == 1 and summary_rows[0]['主题分组'] == '古代文明展',
+                f"主题汇总清单只有一行 古代文明展，实际 {[r['主题分组'] for r in summary_rows]}")
+    assert_true(int(summary_rows[0]['藏品数']) == 2,
+                f"主题汇总藏品数=2，实际 {summary_rows[0]['藏品数']}")
+    gs = report['group_summaries']['古代文明展']
+    assert_true(int(summary_rows[0]['文件数']) == gs['file_count'],
+                "主题汇总 CSV 与 JSON group_summaries 的文件数一致")
     
-    # 步骤7：验证 --only-themes 筛选
-    packed_only = TEST_BASE / 'collections_only_ancient'
-    if packed_only.exists():
-        shutil.rmtree(packed_only)
-    pack_only_out = run([
+    # CSV 报告藏品范围也只有 OLD-001、OLD-002
+    report_csv = packed_dir / '整理报告.csv'
+    csv_rows = read_csv_rows(report_csv)
+    csv_ids = sorted([r['藏品编号'] for r in csv_rows])
+    assert_true(csv_ids == ['OLD-001', 'OLD-002'],
+                f"CSV 报告藏品列表只含 OLD-001/OLD-002，实际: {csv_ids}")
+    with open(report_csv, 'r', encoding='utf-8-sig') as f:
+        csv_header = list(csv.reader(f))[0]
+    assert_true('展览主题' in csv_header,
+                f"CSV 报告表头包含展览主题标签列，表头: {csv_header}")
+    
+    # 缺失素材 CSV 存在
+    missing_csv = packed_dir / '缺失素材_标签有但目录无.csv'
+    assert_true(missing_csv.exists(), "缺失素材 CSV 已生成")
+    missing_rows = read_csv_rows(missing_csv)
+    missing_ids = [r['藏品编号'] for r in missing_rows]
+    assert_true('GHOST-999' in missing_ids and 'GHOST-888' in missing_ids,
+                f"缺失素材 CSV 含 GHOST-999/GHOST-888，实际: {missing_ids}")
+    
+    # 交接清单：古代文明展_交接清单.csv
+    handover = packed_dir / '古代文明展_交接清单.csv'
+    assert_true(handover.exists(), f"古代文明展_交接清单.csv 存在")
+    handover_rows = read_csv_rows(handover)
+    handover_ids = sorted([r['藏品编号'] for r in handover_rows])
+    assert_true(handover_ids == ['OLD-001', 'OLD-002'],
+                f"交接清单里只含 OLD-001/OLD-002，实际: {handover_ids}")
+    
+    # 交接清单包含 image/audio/text 存在/文件名/大小字段
+    hdr = handover_rows[0]
+    for ftype in ('image', 'audio', 'text'):
+        assert_true(f'{ftype}_存在' in hdr or any(k.startswith(f'{ftype}_') for k in hdr.keys()),
+                    f"交接清单包含 {ftype}_ 相关字段")
+    
+    # 对照磁盘：OLD-001 的图片文件在交接清单里的文件名、大小与磁盘一致
+    old001_row = next(r for r in handover_rows if r['藏品编号'] == 'OLD-001')
+    assert_true(old001_row['image_存在'] == '是',
+                "OLD-001 图片存在=是")
+    ancient_dir = packed_dir / '古代文明展'
+    img_file = ancient_dir / old001_row['image_文件名']
+    assert_true(img_file.exists() and img_file.stat().st_size == int(old001_row['image_大小(字节)']),
+                "交接清单 OLD-001 图片文件名/大小 与磁盘实际一致")
+    
+    print("\n✅ 场景B通过")
+
+
+# ============================================================
+# 场景 C：批次配置打包（--batch-config）
+# ============================================================
+def scene_c_batch_config():
+    print("\n" + "#" * 70)
+    print("# 场景C：批次配置打包（3个批次）")
+    print("#" * 70)
+    
+    batch_config = TEST_BASE / '批次配置_展览交接.json'
+    batch_out_root = TEST_BASE / '批次输出'
+    if batch_out_root.exists():
+        shutil.rmtree(batch_out_root)
+    
+    out = run([
         PYTHON, '-m', 'collection_manager', 'pack',
         str(COLLECTIONS),
-        '--manifest-file', str(external_manifest),
-        '--only-themes', '古代文明展',
-        '--exclude-uncategorized',
-        '-o', str(packed_only),
-        '-v', '--apply',
-    ], input_text='y\n')
-    only_dirs = [d.name for d in packed_only.iterdir() if d.is_dir()]
-    assert_true('古代文明展' in only_dirs and '书画艺术展' not in only_dirs and '未分类' not in only_dirs,
-                f"--only-themes + --exclude-uncategorized 只保留古代文明展: {only_dirs}")
+        '--batch-config', str(batch_config),
+        '--apply', '-v',
+    ], input_text='y\ny\ny\n')
     
-    print("\n✅ 场景1通过")
+    # 终端有批次汇总
+    assert_true('批次汇总' in out, "终端输出包含 '批次汇总'")
+    assert_true('春季展_古代文明' in out and '春季展_书画艺术' in out and '未分类素材' in out,
+                "三个批次都出现在终端输出中")
+    
+    # 三个输出目录都存在
+    ancient_out = batch_out_root / '春季展_古代文明'
+    calligraphy_out = batch_out_root / '春季展_书画艺术'
+    uncategorized_out = batch_out_root / '未分类素材'
+    for p, name in ((ancient_out, '春季展_古代文明'),
+                    (calligraphy_out, '春季展_书画艺术'),
+                    (uncategorized_out, '未分类素材')):
+        assert_true(p.exists(), f"批次输出目录 {name} 存在")
+    
+    # 春季展_古代文明：只有古代文明展分组
+    ancient_subdirs = [p.name for p in ancient_out.iterdir() if p.is_dir()]
+    assert_true(ancient_subdirs == ['古代文明展'],
+                f"春季展_古代文明 只含 古代文明展 目录，实际: {ancient_subdirs}")
+    ancient_report = ancient_out / '整理报告.json'
+    with open(ancient_report, 'r', encoding='utf-8') as f:
+        ar = json.load(f)
+    assert_true(ar['statistics']['total_collections'] == 2,
+                f"春季展_古代文明 报告总藏品数=2，实际 {ar['statistics']['total_collections']}")
+    assert_true((ancient_out / '古代文明展_交接清单.csv').exists(),
+                "春季展_古代文明 有交接清单")
+    
+    # 春季展_书画艺术：OLD-003 一个藏品，3个文件
+    calligraphy_report = calligraphy_out / '整理报告.json'
+    with open(calligraphy_report, 'r', encoding='utf-8') as f:
+        cr = json.load(f)
+    assert_true(cr['statistics']['total_collections'] == 1,
+                f"春季展_书画艺术 报告总藏品数=1，实际 {cr['statistics']['total_collections']}")
+    calligraphy_handover = calligraphy_out / '书画艺术展_交接清单.csv'
+    calligraphy_rows = read_csv_rows(calligraphy_handover)
+    assert_true(calligraphy_rows[0]['藏品编号'] == 'OLD-003',
+                f"书画艺术展交接清单藏品=OLD-003，实际 {calligraphy_rows[0]['藏品编号']}")
+    assert_true(calligraphy_rows[0]['是否完整'] == '是',
+                "OLD-003 三类文件齐全，标记完整")
+    
+    # 未分类素材：包含 TMP-A1~TMP-A3 和 unsupported files
+    uncategorized_report = uncategorized_out / '整理报告.json'
+    with open(uncategorized_report, 'r', encoding='utf-8') as f:
+        ur = json.load(f)
+    uncategorized_files = ur['groups'].get('未分类', {}).get('files', [])
+    uncategorized_names = [Path(p).name for p in uncategorized_files]
+    assert_true(any('TMP-A1' in n for n in uncategorized_names),
+                "未分类素材包含 TMP-A1 的文件")
+    assert_true(any('参观指南.pdf' == n for n in uncategorized_names),
+                "未分类素材包含 pdf 等不支持格式")
+    
+    # 未分类目录文件数与磁盘一致
+    uncat_dir = uncategorized_out / '未分类'
+    disk_count = len([f for f in uncat_dir.iterdir() if f.is_file()])
+    report_count = ur['groups']['未分类']['file_count']
+    assert_true(disk_count == report_count,
+                f"未分类磁盘文件数={disk_count} 与报告 file_count={report_count} 一致")
+    
+    print("\n✅ 场景C通过")
 
 
 # ============================================================
-# 场景 2：check 不支持格式 - 终端报告 + error-log 都要有
+# 场景 2（旧）：不支持格式 - 终端+error-log
 # ============================================================
-def scene2():
+def scene2_check_unsupported():
     print("\n" + "#" * 70)
     print("# 场景2：check 不支持格式 → 终端+error-log 双记录")
     print("#" * 70)
@@ -199,36 +320,28 @@ def scene2():
     
     unsupported_names = ['参观指南.pdf', '安装程序.exe', '资料包.zip', '演示文稿.ppt', '数据备份.db']
     
-    # 终端输出检查
     for name in unsupported_names:
         assert_true(name in check_out, f"终端输出包含 {name}")
     assert_true('不支持的文件格式' in check_out,
                 "终端输出包含 '不支持的文件格式' 错误信息")
     
-    # check_report.csv 检查
     assert_true(report_csv.exists(), "check_report.csv 已生成")
-    with open(report_csv, 'r', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f)
-        report_rows = list(reader)
+    report_rows = read_csv_rows(report_csv)
     unsupported_in_report = [r for r in report_rows if r.get('file') and Path(r['file']).name in unsupported_names]
     assert_true(len(unsupported_in_report) == 5,
                 f"check_report.csv 中 5 个不支持格式均有记录，实际 {len(unsupported_in_report)}")
     for r in unsupported_in_report:
         assert_true('不支持' in r.get('format', ''),
-                    f"{Path(r['file']).name} 的格式列含'不支持': {r.get('format', '')}")
+                    f"{Path(r['file']).name} 的 format 列含'不支持'")
     
-    # error-log 检查
     assert_true(error_csv.exists(), "check_errors.csv 已生成")
-    with open(error_csv, 'r', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f)
-        err_rows = list(reader)
-    
+    err_rows = read_csv_rows(error_csv)
     for name in unsupported_names:
         file_errs = [r for r in err_rows if r.get('file_path') and Path(r['file_path']).name == name]
         assert_true(len(file_errs) >= 1, f"error-log 包含 {name} 的至少一条记录")
         has_format_err = any(
             'format' in (r.get('error_type') or '') and
-            ('不支持' in (r.get('message') or '') or 'unsupported' in (r.get('message') or '').lower())
+            '不支持' in (r.get('message') or '')
             for r in file_errs
         )
         assert_true(has_format_err, f"error-log 中 {name} 存在含'不支持'的 format 错误")
@@ -237,9 +350,9 @@ def scene2():
 
 
 # ============================================================
-# 场景 3：rename --id-map --apply → 三类文件同新编号落盘
+# 场景 3（旧）：rename --id-map --apply
 # ============================================================
-def scene3():
+def scene3_rename_apply():
     print("\n" + "#" * 70)
     print("# 场景3：rename 编号映射 apply → 图片/音频/说明同新编号落盘")
     print("#" * 70)
@@ -247,7 +360,6 @@ def scene3():
     id_map_csv = TEST_BASE / '场景3_编号映射.csv'
     error_log = TEST_BASE / 'rename_errors.csv'
     
-    # 先预览，看冲突检查是否正常（我们的数据是干净的，应该只有 missing_description 级别的提示）
     preview_out = run([
         PYTHON, '-m', 'collection_manager', 'rename',
         str(COLLECTIONS),
@@ -259,7 +371,6 @@ def scene3():
     assert_true('文物照片' in preview_out or '讲解录音' in preview_out or '藏品说明' in preview_out,
                 "预览中显示自定义描述")
     
-    # apply 真正执行
     apply_out = run([
         PYTHON, '-m', 'collection_manager', 'rename',
         str(COLLECTIONS),
@@ -271,7 +382,6 @@ def scene3():
     new_ids = ['EXH-2024-001', 'EXH-2024-002', 'EXH-2024-003']
     old_ids = ['TMP-A1', 'TMP-A2', 'TMP-A3']
     
-    # 检查旧文件不存在、新文件存在
     files_on_disk = {f.name for f in COLLECTIONS.iterdir() if f.is_file() and not f.name.startswith('.')}
     
     for oid, nid in zip(old_ids, new_ids):
@@ -302,9 +412,11 @@ def scene3():
 def main():
     try:
         reset_data()
-        scene1()
-        scene2()
-        scene3()
+        scene_a_tag_history()
+        scene_b_only_themes()
+        scene_c_batch_config()
+        scene2_check_unsupported()
+        scene3_rename_apply()
     except AssertionError as e:
         print(f"\n❌ 验证失败: {e}")
         sys.exit(1)
@@ -315,7 +427,7 @@ def main():
         sys.exit(2)
     
     print("\n" + "#" * 70)
-    print("# ✅ 全部三个场景验证通过！")
+    print("# ✅ 全部场景验证通过！")
     print("#" * 70)
 
 

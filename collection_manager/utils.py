@@ -6,7 +6,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set, Tuple
 
 from .models import FileType, CollectionFile, ErrorRecord
 
@@ -327,3 +327,89 @@ def resolve_manifest_source(directory: Path,
         extra = f"（原始来源: {meta['source']}）" if meta.get('source') else ''
         return f"自动发现（{TAGS_FILENAME}）{extra}"
     return "未找到标签数据"
+
+
+TAGS_HISTORY_FILENAME = '.collection_tags_history.json'
+
+
+def append_tags_history(directory: Path, manifest_path: Path, tags_dict: Dict[str, Dict[str, str]],
+                        source: Optional[str] = None) -> Path:
+    """追加标签导入历史摘要
+    
+    每次 tag --apply 把本次清单的摘要写入目录下的 .collection_tags_history.json
+    """
+    history_path = directory / TAGS_HISTORY_FILENAME
+    history: List[dict] = []
+    if history_path.exists():
+        try:
+            history = load_json(history_path) or []
+        except Exception:
+            history = []
+    
+    version = len(history) + 1
+    entry = {
+        'version': version,
+        'generated_at': datetime.now().isoformat(),
+        'manifest_path': str(manifest_path),
+        'source': source or '',
+        'tag_count': len(tags_dict),
+        'sample_ids': sorted(list(tags_dict.keys()))[:10],
+    }
+    history.append(entry)
+    save_json(history, history_path)
+    return history_path
+
+
+def get_tags_history(directory: Path) -> List[dict]:
+    """读取标签导入历史摘要列表（按版本升序）"""
+    history_path = directory / TAGS_HISTORY_FILENAME
+    if not history_path.exists():
+        return []
+    try:
+        return load_json(history_path) or []
+    except Exception:
+        return []
+
+
+def find_missing_tag_ids(tags_dict: Dict[str, Dict[str, str]],
+                         collection_ids_in_dir: Set[str]) -> List[str]:
+    """找出清单里有但素材目录里找不到的藏品编号"""
+    return sorted([cid for cid in tags_dict.keys() if cid not in collection_ids_in_dir])
+
+
+def write_handover_csv(output_path: Path, group_name: str,
+                       items: Dict[str, 'CollectionItem'],
+                       tag_fields: List[str]) -> Path:
+    """为单个主题生成交接清单 CSV
+    
+    每行一个藏品，列出图片/音频/说明三类文件是否存在、文件名、大小，以及标签字段
+    """
+    from .models import FileType as _FT
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    header = ['藏品编号', '是否完整', '缺失文件']
+    for ftype in ('image', 'audio', 'text'):
+        header.extend([
+            f'{ftype}_存在',
+            f'{ftype}_文件名',
+            f'{ftype}_大小(字节)',
+            f'{ftype}_大小(可读)',
+        ])
+    header.extend(tag_fields)
+    
+    with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for cid in sorted(items.keys()):
+            item = items[cid]
+            row = [cid, '是' if item.is_complete else '否', ', '.join(item.missing_files)]
+            for ftype, attr in (('image', 'image_file'), ('audio', 'audio_file'), ('text', 'text_file')):
+                cf = getattr(item, attr, None)
+                if cf:
+                    size = cf.path.stat().st_size if cf.path.exists() else 0
+                    row.extend(['是', cf.path.name, size, format_size(size)])
+                else:
+                    row.extend(['否', '', '', ''])
+            for field in tag_fields:
+                row.append(item.tags.get(field, ''))
+            writer.writerow(row)
+    return output_path

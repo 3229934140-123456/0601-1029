@@ -1,4 +1,5 @@
 ﻿file,status,format,size,naming
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\.collection_tags_history.json,fail,不支持的文件格式: .json（仅支持图片、音频、文本类文件）,文件大小正常: 847 B,命名不符合规范，建议格式: ECTION-TAGS-HISTORY_类型描述.扩展名
 D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-001_照片.jpg,fail,图片文件损坏或无法读取: No module named 'PIL',文件过小: 2.15 KB (下限: 10.00 KB),命名符合规范 (编号: OLD-001)
 D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-001_讲解.mp3,warn,音频格式: mp3,文件过小: 517 B (下限: 100.00 KB),命名符合规范 (编号: OLD-001)
 D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-001_说明.txt,pass,文本格式: txt,文件大小正常: 44 B,命名符合规范 (编号: OLD-001)

@@ -14,6 +14,9 @@ from ..utils import (
     save_error_records,
     save_tags_manifest,
     load_tags_manifest,
+    append_tags_history,
+    get_tags_history,
+    TAGS_HISTORY_FILENAME,
 )
 
 
@@ -165,6 +168,11 @@ def tag(directory: Path, tags_file: Optional[Path], id_column: str, required_fie
         source_info = str(tags_file) if tags_file else '目录现有标签'
         manifest_path = save_tags_manifest(tags_dict, target, source=source_info)
         click.echo(f"✅ 标签清单已写入: {manifest_path}")
+        
+        history_path = append_tags_history(directory, manifest_path, tags_dict, source=source_info)
+        history = get_tags_history(directory)
+        click.echo(f"📜 已记录到版本历史 (v{history[-1]['version']})，共 {len(history)} 条记录 -> {TAGS_HISTORY_FILENAME}")
+        
         if manifest_output:
             click.echo(f"   后续可通过 --manifest-file {manifest_path} 给 pack/check 等命令直接复用")
         else:
