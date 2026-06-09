@@ -4,6 +4,7 @@ import hashlib
 import csv
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -199,22 +200,45 @@ def validate_naming_pattern(filename: str, pattern: Optional[str] = None) -> boo
 
 
 TAGS_FILENAME = '.collection_tags.json'
+MANIFEST_SCHEMA_VERSION = '1.0'
 
 
-def save_tags_manifest(tags_dict: Dict[str, Dict[str, str]], directory: Path) -> Path:
-    """保存标签清单到目录下的 .collection_tags.json"""
-    manifest_path = directory / TAGS_FILENAME
+def save_tags_manifest(tags_dict: Dict[str, Dict[str, str]], target: Path,
+                       source: Optional[str] = None) -> Path:
+    """保存标签清单到指定路径
+    
+    Args:
+        tags_dict: 标签数据 {藏品编号: {字段名: 字段值}}
+        target: 输出文件路径（或目录路径，目录下会自动用 .collection_tags.json）
+        source: 原始标签来源说明（如原始CSV路径）
+    """
+    if target.is_dir():
+        manifest_path = target / TAGS_FILENAME
+    else:
+        manifest_path = target
+    
     data = {
-        'generated_at': __import__('datetime').datetime.now().isoformat(),
+        'schema_version': MANIFEST_SCHEMA_VERSION,
+        'generated_at': datetime.now().isoformat(),
+        'source': source or '',
+        'tag_count': len(tags_dict),
         'tags': tags_dict,
     }
     save_json(data, manifest_path)
     return manifest_path
 
 
-def load_tags_manifest(directory: Path) -> Optional[Dict[str, Dict[str, str]]]:
-    """从目录下的 .collection_tags.json 加载标签清单"""
-    manifest_path = directory / TAGS_FILENAME
+def load_tags_manifest(source: Path) -> Optional[Dict[str, Dict[str, str]]]:
+    """从标签清单文件或目录加载
+    
+    Args:
+        source: 可以是清单文件路径，或包含 .collection_tags.json 的目录
+    """
+    if source.is_dir():
+        manifest_path = source / TAGS_FILENAME
+    else:
+        manifest_path = source
+    
     if manifest_path.exists():
         try:
             data = load_json(manifest_path)
@@ -224,9 +248,38 @@ def load_tags_manifest(directory: Path) -> Optional[Dict[str, Dict[str, str]]]:
     return None
 
 
-def find_tags_source(directory: Path, explicit_file: Optional[Path] = None,
+def get_manifest_metadata(source: Path) -> Optional[dict]:
+    """获取标签清单的元数据（来源、生成时间等）"""
+    if source.is_dir():
+        manifest_path = source / TAGS_FILENAME
+    else:
+        manifest_path = source
+    
+    if manifest_path.exists():
+        try:
+            data = load_json(manifest_path)
+            return {
+                'path': str(manifest_path),
+                'generated_at': data.get('generated_at', ''),
+                'source': data.get('source', ''),
+                'tag_count': data.get('tag_count', len(data.get('tags', {}))),
+            }
+        except Exception:
+            return None
+    return None
+
+
+def find_tags_source(directory: Path,
+                     explicit_file: Optional[Path] = None,
+                     manifest_file: Optional[Path] = None,
                      id_column: str = '藏品编号') -> Optional[Dict[str, Dict[str, str]]]:
-    """优先使用显式指定的文件，其次尝试 .collection_tags.json，再次尝试目录下的 csv/xlsx"""
+    """查找并加载标签数据
+    
+    优先级：manifest_file > explicit_file(CSV/Excel) > 目录下 .collection_tags.json > 同目录CSV/Excel
+    """
+    if manifest_file:
+        return load_tags_manifest(manifest_file)
+    
     if explicit_file:
         return load_tags_from_csv(explicit_file, id_column)
     
@@ -255,3 +308,22 @@ def find_tags_source(directory: Path, explicit_file: Optional[Path] = None,
             continue
     
     return None
+
+
+def resolve_manifest_source(directory: Path,
+                            explicit_file: Optional[Path] = None,
+                            manifest_file: Optional[Path] = None) -> str:
+    """获取标签来源描述字符串"""
+    if manifest_file:
+        meta = get_manifest_metadata(manifest_file)
+        if meta:
+            extra = f"（原始来源: {meta['source']}）" if meta.get('source') else ''
+            return f"清单文件: {manifest_file}{extra}"
+        return f"清单文件: {manifest_file}"
+    if explicit_file:
+        return f"表格文件: {explicit_file}"
+    meta = get_manifest_metadata(directory)
+    if meta:
+        extra = f"（原始来源: {meta['source']}）" if meta.get('source') else ''
+        return f"自动发现（{TAGS_FILENAME}）{extra}"
+    return "未找到标签数据"

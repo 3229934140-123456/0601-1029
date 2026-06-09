@@ -157,10 +157,18 @@ def tag(directory: Path, tags_file: Optional[Path], id_column: str, required_fie
         click.echo(f"\n💾 待补充清单已保存到: {output}")
     
     if apply:
-        target_dir = manifest_output.parent if manifest_output else directory
-        manifest_path = save_tags_manifest(tags_dict, target_dir)
+        if manifest_output:
+            manifest_output.parent.mkdir(parents=True, exist_ok=True)
+            target = manifest_output
+        else:
+            target = directory
+        source_info = str(tags_file) if tags_file else '目录现有标签'
+        manifest_path = save_tags_manifest(tags_dict, target, source=source_info)
         click.echo(f"✅ 标签清单已写入: {manifest_path}")
-        click.echo("   后续 pack 等命令可自动读取该清单，无需再指定原始表格。")
+        if manifest_output:
+            click.echo(f"   后续可通过 --manifest-file {manifest_path} 给 pack/check 等命令直接复用")
+        else:
+            click.echo("   后续 pack 等命令可自动读取该清单，无需再指定原始表格。")
     
     if error_log:
         errors = []

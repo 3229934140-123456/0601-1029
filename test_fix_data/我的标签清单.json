@@ -1,5 +1,8 @@
 {
-  "generated_at": "2026-06-09T11:25:32.113137",
+  "schema_version": "1.0",
+  "generated_at": "2026-06-09T11:42:27.057520",
+  "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
+  "tag_count": 3,
   "tags": {
     "OLD-001": {
       "名称": "青铜鼎",

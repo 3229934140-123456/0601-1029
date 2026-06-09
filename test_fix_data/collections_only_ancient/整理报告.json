@@ -1,0 +1,123 @@
+{
+  "generated_at": "2026-06-09T11:42:27.464962",
+  "source_directory": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections",
+  "tags_source": "清单文件: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\我的标签清单.json（原始来源: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv）",
+  "all_tag_fields": [
+    "作者",
+    "名称",
+    "展览主题",
+    "年代",
+    "类别"
+  ],
+  "statistics": {
+    "total_collections": 6,
+    "complete_collections": 6,
+    "incomplete_collections": 0,
+    "total_size_bytes": 16750,
+    "total_size_human": "16.36 KB"
+  },
+  "group_summaries": {
+    "古代文明展": {
+      "collection_count": 2,
+      "file_count": 6,
+      "missing_files_count": 0,
+      "size_bytes": 5525,
+      "size_human": "5.40 KB"
+    }
+  },
+  "groups": {
+    "古代文明展": {
+      "file_count": 6,
+      "size_bytes": 5525,
+      "size_human": "5.40 KB",
+      "files": [
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_照片.jpg",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_讲解.mp3",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_说明.txt",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_照片.jpg",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_讲解.mp3",
+        "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_说明.txt"
+      ]
+    }
+  },
+  "collections": {
+    "OLD-001": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {
+        "名称": "青铜鼎",
+        "年代": "商代",
+        "类别": "青铜器",
+        "作者": "未知",
+        "展览主题": "古代文明展"
+      },
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_讲解.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_说明.txt"
+      }
+    },
+    "OLD-002": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {
+        "名称": "青花瓷瓶",
+        "年代": "明代",
+        "类别": "瓷器",
+        "作者": "佚名",
+        "展览主题": "古代文明展"
+      },
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_讲解.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_说明.txt"
+      }
+    },
+    "OLD-003": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {
+        "名称": "山水画",
+        "年代": "清代",
+        "类别": "书画",
+        "作者": "王翚",
+        "展览主题": "书画艺术展"
+      },
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-003_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-003_讲解.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-003_说明.txt"
+      }
+    },
+    "TMP-A1": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {},
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A1_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A1_音频.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A1_文本.txt"
+      }
+    },
+    "TMP-A2": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {},
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A2_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A2_音频.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A2_文本.txt"
+      }
+    },
+    "TMP-A3": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {},
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A3_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A3_音频.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\TMP-A3_文本.txt"
+      }
+    }
+  }
+}
