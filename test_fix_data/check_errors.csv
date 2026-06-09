@@ -1,0 +1,29 @@
+﻿file_path,error_type,message,resolved
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-001_照片.jpg,check_format_fail,图片文件损坏或无法读取: No module named 'PIL',False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-001_照片.jpg,check_size_warn,文件过小: 2.15 KB (下限: 10.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-001_讲解.mp3,check_size_warn,文件过小: 517 B (下限: 100.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-002_照片.jpg,check_format_fail,图片文件损坏或无法读取: No module named 'PIL',False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-002_照片.jpg,check_size_warn,文件过小: 2.15 KB (下限: 10.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-002_讲解.mp3,check_size_warn,文件过小: 517 B (下限: 100.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-003_照片.jpg,check_format_fail,图片文件损坏或无法读取: No module named 'PIL',False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-003_照片.jpg,check_size_warn,文件过小: 2.15 KB (下限: 10.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\OLD-003_讲解.mp3,check_size_warn,文件过小: 517 B (下限: 100.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A1_照片.jpg,check_format_fail,图片文件损坏或无法读取: No module named 'PIL',False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A1_照片.jpg,check_size_warn,文件过小: 2.15 KB (下限: 10.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A1_音频.mp3,check_size_warn,文件过小: 516 B (下限: 100.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A2_照片.jpg,check_format_fail,图片文件损坏或无法读取: No module named 'PIL',False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A2_照片.jpg,check_size_warn,文件过小: 2.15 KB (下限: 10.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A2_音频.mp3,check_size_warn,文件过小: 516 B (下限: 100.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A3_照片.jpg,check_format_fail,图片文件损坏或无法读取: No module named 'PIL',False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A3_照片.jpg,check_size_warn,文件过小: 2.15 KB (下限: 10.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\TMP-A3_音频.mp3,check_size_warn,文件过小: 516 B (下限: 100.00 KB),False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\参观指南.pdf,check_format_fail,不支持的文件格式: .pdf（仅支持图片、音频、文本类文件）,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\参观指南.pdf,check_naming_fail,无法从文件名提取藏品编号,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\安装程序.exe,check_format_fail,不支持的文件格式: .exe（仅支持图片、音频、文本类文件）,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\安装程序.exe,check_naming_fail,无法从文件名提取藏品编号,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\数据备份.db,check_format_fail,不支持的文件格式: .db（仅支持图片、音频、文本类文件）,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\数据备份.db,check_naming_fail,无法从文件名提取藏品编号,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\演示文稿.ppt,check_format_fail,不支持的文件格式: .ppt（仅支持图片、音频、文本类文件）,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\演示文稿.ppt,check_naming_fail,无法从文件名提取藏品编号,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\资料包.zip,check_format_fail,不支持的文件格式: .zip（仅支持图片、音频、文本类文件）,False
+D:\trae-bz\TraeProjects\1029\test_fix_data\collections\资料包.zip,check_naming_fail,无法从文件名提取藏品编号,False

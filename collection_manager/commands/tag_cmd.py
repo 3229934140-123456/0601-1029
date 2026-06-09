@@ -3,7 +3,7 @@
 import click
 import csv
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 from ..models import ErrorRecord
 from ..utils import (
@@ -12,6 +12,8 @@ from ..utils import (
     load_tags_from_csv,
     extract_collection_id,
     save_error_records,
+    save_tags_manifest,
+    load_tags_manifest,
 )
 
 
@@ -55,18 +57,21 @@ def find_untagged_files(
 
 @click.command()
 @click.argument('directory', type=click.Path(exists=True, file_okay=False, path_type=Path))
-@click.argument('tags_file', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument('tags_file', type=click.Path(exists=True, dir_okay=False, path_type=Path), required=False)
 @click.option('--id-column', default='藏品编号', help='编号列名')
 @click.option('--required-fields', default='年代,类别,作者', help='必填字段，逗号分隔')
 @click.option('--output', '-o', type=click.Path(path_type=Path), help='输出待补充清单')
-@click.option('--apply', is_flag=True, help='将标签写入文件（暂仅支持输出清单）')
+@click.option('--apply', is_flag=True, help='导入标签并生成可复用的 .collection_tags.json 到素材目录')
+@click.option('--manifest-output', type=click.Path(path_type=Path), help='指定标签清单输出位置（默认写到素材目录）')
 @click.option('--error-log', type=click.Path(path_type=Path), help='错误记录输出路径')
 @click.option('--verbose', '-v', is_flag=True, help='显示详细信息')
-def tag(directory: Path, tags_file: Path, id_column: str, required_fields: str,
-        output: Path, apply: bool, error_log: Path, verbose: bool):
-    """从表格导入年代、类别、作者标签，生成待补充清单"""
-    click.echo(f"🏷️  正在从 {tags_file} 导入标签")
+def tag(directory: Path, tags_file: Optional[Path], id_column: str, required_fields: str,
+        output: Path, apply: bool, manifest_output: Optional[Path], error_log: Path, verbose: bool):
+    """从表格导入年代、类别、作者标签，生成待补充清单
     
+    标签文件支持 CSV 和 Excel。使用 --apply 会在素材目录生成 .collection_tags.json，
+    后续的 pack、check 等命令可自动读取，无需重复指定原始表格。
+    """
     files = scan_directory(directory)
     click.echo(f"扫描到 {len(files)} 个文件")
     
@@ -81,12 +86,22 @@ def tag(directory: Path, tags_file: Path, id_column: str, required_fields: str,
     
     click.echo(f"识别到 {len(collection_ids)} 个藏品编号")
     
-    try:
-        tags_dict = load_tags_from_csv(tags_file, id_column)
-        click.echo(f"从表格加载了 {len(tags_dict)} 条标签记录")
-    except Exception as e:
-        click.echo(f"❌ 读取标签文件失败: {e}")
-        return
+    tags_dict: Dict[str, Dict[str, str]] = {}
+    if tags_file:
+        try:
+            tags_dict = load_tags_from_csv(tags_file, id_column)
+            click.echo(f"🏷️  从 {tags_file} 加载了 {len(tags_dict)} 条标签记录")
+        except Exception as e:
+            click.echo(f"❌ 读取标签文件失败: {e}")
+            return
+    else:
+        existing = load_tags_manifest(directory)
+        if existing:
+            tags_dict = existing
+            click.echo(f"📂 从现有标签清单加载了 {len(tags_dict)} 条记录")
+        else:
+            click.echo("❌ 未指定标签文件，且素材目录下也没有 .collection_tags.json")
+            return
     
     required = [f.strip() for f in required_fields.split(',') if f.strip()]
     click.echo(f"必填字段: {', '.join(required)}")
@@ -140,6 +155,12 @@ def tag(directory: Path, tags_file: Path, id_column: str, required_fields: str,
                     writer.writerow([f])
         
         click.echo(f"\n💾 待补充清单已保存到: {output}")
+    
+    if apply:
+        target_dir = manifest_output.parent if manifest_output else directory
+        manifest_path = save_tags_manifest(tags_dict, target_dir)
+        click.echo(f"✅ 标签清单已写入: {manifest_path}")
+        click.echo("   后续 pack 等命令可自动读取该清单，无需再指定原始表格。")
     
     if error_log:
         errors = []

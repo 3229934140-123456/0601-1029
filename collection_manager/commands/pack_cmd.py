@@ -17,6 +17,8 @@ from ..utils import (
     load_tags_from_csv,
     format_size,
     save_error_records,
+    find_tags_source,
+    TAGS_FILENAME,
 )
 
 
@@ -153,15 +155,18 @@ def pack(directory: Path, output_dir: Optional[Path], tags_file: Optional[Path],
     click.echo(f"扫描到 {len(files)} 个文件")
     
     tags_dict: Dict[str, Dict[str, str]] = {}
-    if tags_file:
-        try:
-            tags_dict = load_tags_from_csv(tags_file, id_column)
-            click.echo(f"加载了 {len(tags_dict)} 条标签记录")
-        except Exception as e:
-            click.echo(f"⚠️  读取标签文件失败: {e}")
+    try:
+        tags_dict = find_tags_source(directory, tags_file, id_column) or {}
+        if tags_dict:
+            source = str(tags_file) if tags_file else f"自动发现（{TAGS_FILENAME} 或同目录表格）"
+            click.echo(f"📋 加载了 {len(tags_dict)} 条标签记录（来源: {source}）")
+        else:
+            click.echo("⚠️  未找到标签信息，将作为单组打包")
+    except Exception as e:
+        click.echo(f"⚠️  读取标签失败: {e}")
     
     items = build_collection_items(files, tags_dict)
-    groups = group_by_tag(files, tags_dict, group_by) if tags_file else {'全部': files}
+    groups = group_by_tag(files, tags_dict, group_by) if tags_dict else {'全部': files}
     
     click.echo("=" * 60)
     click.echo("打包预览")

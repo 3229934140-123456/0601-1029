@@ -47,14 +47,16 @@ def extract_collection_id(filename: str) -> Optional[str]:
     支持的格式：
     - COL001, COL-001, COL_001
     - 2024-001, 2024_001
+    - TMP-A1, EXH-2024-001 (多段带字母和数字)
     - 纯数字编号如 001, 123
     """
     name = Path(filename).stem
     
     patterns = [
-        r'([A-Z]{2,4}[-_]?\d{3,6})',
-        r'(\d{4}[-_]\d{3,6})',
-        r'(\d{3,6})',
+        r'([A-Z]{2,6}(?:[-_][A-Z0-9]+)+)',
+        r'([A-Z]{2,4}[-_]?\d{1,6})',
+        r'(\d{4}[-_]\d{1,6})',
+        r'(\d{2,6})',
     ]
     
     for pattern in patterns:
@@ -82,16 +84,23 @@ def create_collection_file(file_path: Path, compute_hash: bool = True) -> Collec
     )
 
 
-def scan_directory(directory: Path, recursive: bool = True) -> List[Path]:
-    """扫描目录中的所有文件"""
+def scan_directory(directory: Path, recursive: bool = True, exclude_internal: bool = True) -> List[Path]:
+    """扫描目录中的所有文件
+    
+    Args:
+        directory: 要扫描的目录
+        recursive: 是否递归子目录
+        exclude_internal: 是否排除工具内部文件（如 .collection_tags.json）
+    """
     if not directory.exists():
         raise FileNotFoundError(f"目录不存在: {directory}")
     
     files = []
     pattern = '**/*' if recursive else '*'
+    internal_names = {'.collection_tags.json'} if exclude_internal else set()
     
     for file_path in directory.glob(pattern):
-        if file_path.is_file():
+        if file_path.is_file() and file_path.name not in internal_names:
             files.append(file_path)
     
     return files
@@ -187,3 +196,62 @@ def validate_naming_pattern(filename: str, pattern: Optional[str] = None) -> boo
     stem = Path(filename).stem
     default_pattern = r'^[A-Z0-9\-]{3,20}_.+$'
     return bool(re.match(default_pattern, stem))
+
+
+TAGS_FILENAME = '.collection_tags.json'
+
+
+def save_tags_manifest(tags_dict: Dict[str, Dict[str, str]], directory: Path) -> Path:
+    """保存标签清单到目录下的 .collection_tags.json"""
+    manifest_path = directory / TAGS_FILENAME
+    data = {
+        'generated_at': __import__('datetime').datetime.now().isoformat(),
+        'tags': tags_dict,
+    }
+    save_json(data, manifest_path)
+    return manifest_path
+
+
+def load_tags_manifest(directory: Path) -> Optional[Dict[str, Dict[str, str]]]:
+    """从目录下的 .collection_tags.json 加载标签清单"""
+    manifest_path = directory / TAGS_FILENAME
+    if manifest_path.exists():
+        try:
+            data = load_json(manifest_path)
+            return data.get('tags', {})
+        except Exception:
+            return None
+    return None
+
+
+def find_tags_source(directory: Path, explicit_file: Optional[Path] = None,
+                     id_column: str = '藏品编号') -> Optional[Dict[str, Dict[str, str]]]:
+    """优先使用显式指定的文件，其次尝试 .collection_tags.json，再次尝试目录下的 csv/xlsx"""
+    if explicit_file:
+        return load_tags_from_csv(explicit_file, id_column)
+    
+    manifest_tags = load_tags_manifest(directory)
+    if manifest_tags:
+        return manifest_tags
+    
+    for candidate in directory.glob('*.csv'):
+        if candidate.name.startswith('.'):
+            continue
+        try:
+            return load_tags_from_csv(candidate, id_column)
+        except Exception:
+            continue
+    for candidate in directory.glob('*.xlsx'):
+        try:
+            return load_tags_from_csv(candidate, id_column)
+        except Exception:
+            continue
+    for candidate in directory.parent.glob('*.csv'):
+        if candidate.name.startswith('.'):
+            continue
+        try:
+            return load_tags_from_csv(candidate, id_column)
+        except Exception:
+            continue
+    
+    return None

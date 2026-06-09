@@ -76,7 +76,7 @@ def check_file_format(cf: CollectionFile) -> Tuple[CheckStatus, str]:
         else:
             return CheckStatus.FAIL, f"不支持的文本格式: {ext}"
     
-    return CheckStatus.WARN, f"未知文件类型: {ext}"
+    return CheckStatus.FAIL, f"不支持的文件格式: {ext or '无扩展名'}（仅支持图片、音频、文本类文件）"
 
 
 def check_file_size(cf: CollectionFile, max_size: Optional[int] = None, min_size: Optional[int] = None) -> Tuple[CheckStatus, str]:
@@ -180,8 +180,6 @@ def check(directory: Path, naming_pattern: str, max_image_size: int, max_audio_s
         for file_path in bar:
             try:
                 cf = create_collection_file(file_path, compute_hash=False)
-                if cf.file_type == FileType.UNKNOWN:
-                    continue
                 
                 max_size = None
                 if cf.file_type == FileType.IMAGE and max_image_size:
@@ -192,7 +190,7 @@ def check(directory: Path, naming_pattern: str, max_image_size: int, max_audio_s
                 result = run_checks(cf, naming_pattern, max_size)
                 results.append(result)
             except Exception as e:
-                click.echo(f"跳过 {file_path.name}: {e}")
+                click.echo(f"处理 {file_path.name} 出错: {e}")
     
     print_check_results(results, verbose)
     
