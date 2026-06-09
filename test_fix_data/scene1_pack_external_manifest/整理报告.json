@@ -1,18 +1,19 @@
 {
-  "generated_at": "2026-06-09T11:56:00.103892",
+  "generated_at": "2026-06-09T12:05:56.268203",
   "source_directory": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections",
-  "tags_source": "自动发现（.collection_tags.json）（原始来源: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv）",
+  "tags_source": "清单文件: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\我的外部清单.json（原始来源: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv）",
   "tags_manifest_meta": {
-    "path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
-    "generated_at": "2026-06-09T11:55:59.724263",
+    "path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\我的外部清单.json",
+    "generated_at": "2026-06-09T12:05:56.074429",
     "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
     "tag_count": 5
   },
   "tags_history_used_version": 2,
+  "tags_history_used_version_note": "v2（匹配历史记录，来源: D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv）",
   "tags_history_summary": [
     {
       "version": 1,
-      "generated_at": "2026-06-09T11:55:59.130152",
+      "generated_at": "2026-06-09T12:05:55.521207",
       "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
       "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
       "tag_count": 5,
@@ -26,8 +27,8 @@
     },
     {
       "version": 2,
-      "generated_at": "2026-06-09T11:55:59.725206",
-      "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
+      "generated_at": "2026-06-09T12:05:56.076010",
+      "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\我的外部清单.json",
       "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
       "tag_count": 5,
       "sample_ids": [
@@ -82,22 +83,6 @@
     }
   },
   "collections": {
-    "OLD-001": {
-      "is_complete": true,
-      "missing_files": [],
-      "tags": {
-        "名称": "青铜鼎",
-        "年代": "商代",
-        "类别": "青铜器",
-        "作者": "未知",
-        "展览主题": "古代文明展"
-      },
-      "files": {
-        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_照片.jpg",
-        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_讲解.mp3",
-        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_说明.txt"
-      }
-    },
     "OLD-002": {
       "is_complete": true,
       "missing_files": [],
@@ -112,6 +97,22 @@
         "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_照片.jpg",
         "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_讲解.mp3",
         "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-002_说明.txt"
+      }
+    },
+    "OLD-001": {
+      "is_complete": true,
+      "missing_files": [],
+      "tags": {
+        "名称": "青铜鼎",
+        "年代": "商代",
+        "类别": "青铜器",
+        "作者": "未知",
+        "展览主题": "古代文明展"
+      },
+      "files": {
+        "image": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_照片.jpg",
+        "audio": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_讲解.mp3",
+        "text": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\OLD-001_说明.txt"
       }
     }
   }

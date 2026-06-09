@@ -24,8 +24,7 @@ from ..utils import (
     get_tags_history,
     find_missing_tag_ids,
     write_handover_csv,
-    TAGS_FILENAME,
-    TAGS_HISTORY_FILENAME,
+    INTERNAL_FILENAMES,
 )
 
 
@@ -36,7 +35,13 @@ def group_by_tag(
     only_themes: Optional[Set[str]] = None,
     exclude_uncategorized: bool = False,
 ) -> Dict[str, List[Path]]:
-    """按标签分组文件"""
+    """按标签分组文件
+    
+    当指定 only_themes 时，自动排除未分类（馆员明确只打选中主题，未分类不应混入）
+    """
+    if only_themes is not None and len(only_themes) > 0:
+        exclude_uncategorized = True
+    
     groups: Dict[str, List[Path]] = defaultdict(list)
     ungrouped: List[Path] = []
     
@@ -119,6 +124,28 @@ def filter_items_by_groups(items: Dict[str, CollectionItem],
     return {cid: items[cid] for cid in cids_in_groups if cid in items}
 
 
+def resolve_used_version(tags_history: List[dict], manifest_meta: Optional[dict]) -> Tuple[Optional[int], str]:
+    """根据实际使用的清单元数据，在历史中找到匹配版本
+    
+    返回: (版本号 or None, 说明文本)
+    """
+    if not manifest_meta:
+        return None, '未读取到清单元数据'
+    
+    manifest_path = manifest_meta.get('path', '')
+    manifest_gen = manifest_meta.get('generated_at', '')
+    
+    for entry in tags_history:
+        if (entry.get('manifest_path') == manifest_path and manifest_path) or \
+           (entry.get('generated_at') == manifest_gen and manifest_gen):
+            return entry['version'], f"v{entry['version']}（匹配历史记录，来源: {entry.get('source', '')}）"
+    
+    return None, (
+        f"未匹配到目录历史版本（清单元数据: path={manifest_path}, generated_at={manifest_gen}），"
+        f"仅使用清单自带元数据"
+    )
+
+
 def create_report(
     items: Dict[str, CollectionItem],
     groups: Dict[str, List[Path]],
@@ -132,6 +159,8 @@ def create_report(
     """生成整理报告（items 已是过滤后实际打包范围）"""
     total_size = sum(f.stat().st_size for group_files in groups.values() for f in group_files)
     complete_count = sum(1 for item in items.values() if item.is_complete)
+    
+    used_version, version_note = resolve_used_version(tags_history, manifest_meta)
     
     group_summaries = {}
     for group_name, group_files in groups.items():
@@ -161,9 +190,8 @@ def create_report(
         'source_directory': str(directory),
         'tags_source': tags_source,
         'tags_manifest_meta': manifest_meta,
-        'tags_history_used_version': (
-            tags_history[-1]['version'] if tags_history and manifest_meta else None
-        ),
+        'tags_history_used_version': used_version,
+        'tags_history_used_version_note': version_note,
         'tags_history_summary': tags_history,
         'missing_tag_ids': missing_tag_ids,
         'all_tag_fields': all_tag_fields,
@@ -201,6 +229,115 @@ def create_report(
         }
     
     return report
+
+
+def write_handover_for_copy(
+    output_dir: Path,
+    safe_group_name: str,
+    group_name: str,
+    group_dir: Path,
+    items_for_report: Dict[str, CollectionItem],
+    all_tag_fields: List[str],
+) -> Path:
+    """copy 模式：基于分组目录写交接清单"""
+    group_cids: Set[str] = set()
+    for f in group_dir.iterdir():
+        if f.is_file():
+            try:
+                cf = create_collection_file(f, compute_hash=False)
+                if cf.collection_id:
+                    group_cids.add(cf.collection_id)
+            except Exception:
+                pass
+    group_items = {cid: items_for_report[cid] for cid in group_cids if cid in items_for_report}
+    handover_path = output_dir / f"{safe_group_name}_交接清单.csv"
+    write_handover_csv(handover_path, group_name, group_items, all_tag_fields)
+    return handover_path
+
+
+def write_handover_for_zip(
+    output_dir: Path,
+    safe_group_name: str,
+    group_name: str,
+    zip_path: Path,
+    items_for_report: Dict[str, CollectionItem],
+    all_tag_fields: List[str],
+    tags_dict: Dict[str, Dict[str, str]],
+) -> Path:
+    """zip 模式：基于 zip 内条目写交接清单（文件名/大小与 zipinfo 严格对齐）
+    
+    重新根据 zip 内文件构建一个临时 items 字典，保证交接清单数据与 zip 真实条目一致
+    """
+    zip_items: Dict[str, CollectionItem] = {}
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        for info in zf.infolist():
+            inner_name = Path(info.filename).name
+            fake_path = Path(inner_name)
+            try:
+                cf = create_collection_file(fake_path, compute_hash=False)
+                if not cf.collection_id:
+                    continue
+                if cf.collection_id not in zip_items:
+                    tags = tags_dict.get(cf.collection_id, {})
+                    zip_items[cf.collection_id] = CollectionItem(
+                        collection_id=cf.collection_id,
+                        tags=tags,
+                    )
+                item = zip_items[cf.collection_id]
+                if cf.file_type == FileType.IMAGE:
+                    cf.size = info.file_size
+                    item.image_file = cf
+                elif cf.file_type == FileType.AUDIO:
+                    cf.size = info.file_size
+                    item.audio_file = cf
+                elif cf.file_type == FileType.TEXT:
+                    cf.size = info.file_size
+                    item.text_file = cf
+            except Exception:
+                pass
+    
+    handover_path = output_dir / f"{safe_group_name}_交接清单.csv"
+    _write_zip_handover_csv(handover_path, group_name, zip_items, all_tag_fields)
+    return handover_path
+
+
+def _write_zip_handover_csv(output_path: Path, group_name: str,
+                            items: Dict[str, CollectionItem],
+                            tag_fields: List[str]) -> Path:
+    """zip 交接清单：size 基于 zip 条目的 file_size，path 基于 zip 内文件名"""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    header = ['藏品编号', '是否完整', '缺失文件']
+    for ftype in ('image', 'audio', 'text'):
+        header.extend([
+            f'{ftype}_存在',
+            f'{ftype}_文件名',
+            f'{ftype}_大小(字节)',
+            f'{ftype}_大小(可读)',
+        ])
+    header.extend(tag_fields)
+    
+    with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for cid in sorted(items.keys()):
+            item = items[cid]
+            row = [cid, '是' if item.is_complete else '否', ', '.join(item.missing_files)]
+            for attr in ('image_file', 'audio_file', 'text_file'):
+                cf = getattr(item, attr, None)
+                if cf and cf.path is not None:
+                    size = getattr(cf, 'size', None)
+                    if size is None:
+                        try:
+                            size = cf.path.stat().st_size if cf.path.exists() else 0
+                        except Exception:
+                            size = 0
+                    row.extend(['是', cf.path.name, size, format_size(size)])
+                else:
+                    row.extend(['否', '', '', ''])
+            for field in tag_fields:
+                row.append(item.tags.get(field, ''))
+            writer.writerow(row)
+    return output_path
 
 
 def run_single_pack(directory: Path, output_dir: Path,
@@ -248,12 +385,18 @@ def run_single_pack(directory: Path, output_dir: Path,
     click.echo(f"🗂️  分组数量: {len(groups)}")
     click.echo(f"📊 报告范围藏品数: {len(items_for_report)}")
     
+    if only_themes:
+        click.echo(f"🎯 仅打包主题: {', '.join(sorted(only_themes))}（已自动排除未分类）")
+    
     if missing_tag_ids:
         click.echo(f"⚠️  清单中存在但素材目录中未找到的编号 ({len(missing_tag_ids)}): {', '.join(missing_tag_ids[:10])}{'...' if len(missing_tag_ids) > 10 else ''}")
     
-    if tags_history:
-        latest = tags_history[-1]
-        click.echo(f"📜 使用标签版本: v{latest['version']} ({latest['generated_at']}, 来源: {latest.get('source','')})")
+    used_version, version_note = resolve_used_version(tags_history, manifest_meta)
+    if manifest_meta:
+        if used_version:
+            click.echo(f"📜 使用标签版本: {version_note}")
+        else:
+            click.echo(f"📜 {version_note}")
     
     for group_name, group_files in sorted(groups.items()):
         group_size = sum(f.stat().st_size for f in group_files)
@@ -302,6 +445,12 @@ def run_single_pack(directory: Path, output_dir: Path,
                         arcname = f.name
                         zf.write(f, arcname)
                 click.echo(f"  ✅ 完成: {format_size(zip_path.stat().st_size)}")
+                
+                handover_path = write_handover_for_zip(
+                    output_dir, safe_group_name, group_name,
+                    zip_path, items_for_report, all_tag_fields, tags_dict,
+                )
+                click.echo(f"  📄 交接清单: {handover_path.name}")
             except Exception as e:
                 errors.append(ErrorRecord(
                     file_path=group_name,
@@ -332,17 +481,10 @@ def run_single_pack(directory: Path, output_dir: Path,
                     ))
             click.echo(f"  ✅ 复制了 {len(group_files)} 个文件")
             
-            group_cids: Set[str] = set()
-            for f in group_files:
-                try:
-                    cf = create_collection_file(f, compute_hash=False)
-                    if cf.collection_id:
-                        group_cids.add(cf.collection_id)
-                except Exception:
-                    pass
-            group_items = {cid: items_for_report[cid] for cid in group_cids if cid in items_for_report}
-            handover_path = output_dir / f"{safe_group_name}_交接清单.csv"
-            write_handover_csv(handover_path, group_name, group_items, all_tag_fields)
+            handover_path = write_handover_for_copy(
+                output_dir, safe_group_name, group_name,
+                group_dir, items_for_report, all_tag_fields,
+            )
             click.echo(f"  📄 交接清单: {handover_path.name}")
     
     if not no_report:
@@ -407,16 +549,7 @@ def run_single_pack(directory: Path, output_dir: Path,
 
 
 def load_batch_config(config_path: Path) -> List[dict]:
-    """加载批次配置文件
-    
-    支持 JSON / YAML（YAML需要PyYAML，否则回退JSON）
-    配置格式示例：
-    [
-      {"name": "春季展交接", "themes": ["古代文明展", "书画艺术展"],
-       "output_dir": "./春季展交接包", "exclude_uncategorized": true, "format": "copy"},
-      {"name": "未分类整理", "output_dir": "./未分类", "only_uncategorized": true, "format": "zip"}
-    ]
-    """
+    """加载批次配置文件（JSON）"""
     config_path = Path(config_path)
     text = config_path.read_text(encoding='utf-8')
     data = json.loads(text)
@@ -434,7 +567,7 @@ def load_batch_config(config_path: Path) -> List[dict]:
 @click.option('--manifest-file', type=click.Path(exists=True, dir_okay=False, path_type=Path),
               help='标签清单文件（.json），由 tag --apply 生成，优先级高于 --tags-file')
 @click.option('--group-by', default='展览主题', help='按哪个标签字段分组')
-@click.option('--only-themes', default=None, help='只打包指定的主题，多个主题用英文逗号分隔')
+@click.option('--only-themes', default=None, help='只打包指定的主题，多个主题用英文逗号分隔（会自动排除未分类）')
 @click.option('--exclude-uncategorized', is_flag=True, help='排除未分类（没有分组标签）的文件')
 @click.option('--format', 'pack_format', type=click.Choice(['copy', 'zip']), default='copy',
               help='打包方式：copy-复制到文件夹，zip-压缩为zip')
@@ -505,6 +638,10 @@ def pack(directory: Path, output_dir: Optional[Path], tags_file: Optional[Path],
             click.echo("=" * 70)
             
             try:
+                batch_format = batch.get('format', pack_format)
+                if batch_format not in ('copy', 'zip'):
+                    raise ValueError(f"不支持的 format: '{batch_format}'（仅支持 copy / zip）")
+                
                 batch_themes = None
                 if 'themes' in batch:
                     batch_themes = {t.strip() for t in batch['themes']}
@@ -516,7 +653,6 @@ def pack(directory: Path, output_dir: Optional[Path], tags_file: Optional[Path],
                     batch_themes = set()
                     batch_exclude = False
                 
-                batch_format = batch.get('format', pack_format)
                 batch_output = Path(batch.get('output_dir')) if batch.get('output_dir') else (
                     output_dir / batch_name
                 )
@@ -542,13 +678,13 @@ def pack(directory: Path, output_dir: Optional[Path], tags_file: Optional[Path],
                 if not ok:
                     click.echo(f"⚠️  批次 {batch_name} 异常，继续处理下一批次")
             except Exception as e:
-                click.echo(f"❌ 批次 {batch_name} 异常: {e}")
+                click.echo(f"❌ 批次 {batch_name} 失败: {e}")
                 all_errors.append(ErrorRecord(
                     file_path=batch_name,
-                    error_type='batch_error',
+                    error_type='batch_config_error',
                     message=str(e),
                 ))
-                batch_results.append((batch_name, False, f"异常: {e}"))
+                batch_results.append((batch_name, False, f"失败: {e}"))
         
         click.echo("\n" + "#" * 70)
         click.echo("# 批次汇总")
@@ -568,7 +704,7 @@ def pack(directory: Path, output_dir: Optional[Path], tags_file: Optional[Path],
     theme_filter: Optional[Set[str]] = None
     if only_themes:
         theme_filter = {t.strip() for t in only_themes.split(',') if t.strip()}
-        click.echo(f"🎯 仅打包主题: {', '.join(theme_filter)}")
+        click.echo(f"🎯 仅打包主题: {', '.join(theme_filter)}（已自动排除未分类）")
     
     run_single_pack(
         directory=directory,

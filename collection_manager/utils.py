@@ -91,14 +91,14 @@ def scan_directory(directory: Path, recursive: bool = True, exclude_internal: bo
     Args:
         directory: 要扫描的目录
         recursive: 是否递归子目录
-        exclude_internal: 是否排除工具内部文件（如 .collection_tags.json）
+        exclude_internal: 是否排除工具内部文件（如 .collection_tags.json、.collection_tags_history.json）
     """
     if not directory.exists():
         raise FileNotFoundError(f"目录不存在: {directory}")
     
     files = []
     pattern = '**/*' if recursive else '*'
-    internal_names = {'.collection_tags.json'} if exclude_internal else set()
+    internal_names = INTERNAL_FILENAMES if exclude_internal else set()
     
     for file_path in directory.glob(pattern):
         if file_path.is_file() and file_path.name not in internal_names:
@@ -330,6 +330,8 @@ def resolve_manifest_source(directory: Path,
 
 
 TAGS_HISTORY_FILENAME = '.collection_tags_history.json'
+
+INTERNAL_FILENAMES = {TAGS_FILENAME, TAGS_HISTORY_FILENAME}
 
 
 def append_tags_history(directory: Path, manifest_path: Path, tags_dict: Dict[str, Dict[str, str]],

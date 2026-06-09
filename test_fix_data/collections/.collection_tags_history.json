@@ -1,7 +1,7 @@
 [
   {
     "version": 1,
-    "generated_at": "2026-06-09T11:55:59.130152",
+    "generated_at": "2026-06-09T12:05:55.521207",
     "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
     "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
     "tag_count": 5,
@@ -15,8 +15,8 @@
   },
   {
     "version": 2,
-    "generated_at": "2026-06-09T11:55:59.725206",
-    "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\collections\\.collection_tags.json",
+    "generated_at": "2026-06-09T12:05:56.076010",
+    "manifest_path": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\我的外部清单.json",
     "source": "D:\\trae-bz\\TraeProjects\\1029\\test_fix_data\\场景1_藏品标签.csv",
     "tag_count": 5,
     "sample_ids": [

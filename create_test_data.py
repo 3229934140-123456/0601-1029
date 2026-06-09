@@ -83,7 +83,7 @@ def create_fix_test_data(base_dir: Path) -> None:
         for col in scene3_collections:
             writer.writerow([col['old'], col['new'], '文物照片', '讲解录音', '藏品说明'])
     
-    # 批次配置文件
+    # 批次配置文件（含 copy 批次、zip 批次、以及故意写错 format 的批次）
     batch_config = base_dir / '批次配置_展览交接.json'
     batch_data = [
         {
@@ -94,11 +94,17 @@ def create_fix_test_data(base_dir: Path) -> None:
             'format': 'copy',
         },
         {
-            'name': '春季展_书画艺术',
+            'name': '春季展_书画艺术_zip',
             'themes': ['书画艺术展'],
             'exclude_uncategorized': True,
-            'output_dir': str((base_dir / '批次输出' / '春季展_书画艺术').resolve()),
-            'format': 'copy',
+            'output_dir': str((base_dir / '批次输出' / '春季展_书画艺术_zip').resolve()),
+            'format': 'zip',
+        },
+        {
+            'name': '格式非法的批次',
+            'themes': ['古代文明展'],
+            'output_dir': str((base_dir / '批次输出' / '格式非法批次').resolve()),
+            'format': 'tar_gz',
         },
         {
             'name': '未分类素材',
